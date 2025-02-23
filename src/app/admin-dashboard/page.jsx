@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useAdmin } from '@/contexts/AdminContext';
 
 const DashboardCard = ({ title, value, color }) => (
   <motion.div
@@ -14,6 +15,16 @@ const DashboardCard = ({ title, value, color }) => (
 );
 
 export default function AdminDashboard() {
+  const { tasks, employees, finances, getStatistics } = useAdmin();
+  const stats = getStatistics();
+
+  // Calculate monthly revenue
+  const currentDate = new Date();
+  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const monthlyRevenue = finances
+    .filter(t => new Date(t.date) >= firstDayOfMonth && t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
@@ -21,13 +32,27 @@ export default function AdminDashboard() {
       </h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DashboardCard title="Total Employees" value="12" color="border-blue-500" />
-        <DashboardCard title="Active Tasks" value="8" color="border-green-500" />
-        <DashboardCard title="Pending Tasks" value="3" color="border-yellow-500" />
-        <DashboardCard title="Monthly Revenue" value="₹85,000" color="border-purple-500" />
+        <DashboardCard 
+          title="Total Employees" 
+          value={stats.totalEmployees} 
+          color="border-blue-500" 
+        />
+        <DashboardCard 
+          title="Active Tasks" 
+          value={tasks.filter(t => t.status === 'In Progress').length} 
+          color="border-green-500" 
+        />
+        <DashboardCard 
+          title="Pending Tasks" 
+          value={stats.pendingTasks} 
+          color="border-yellow-500" 
+        />
+        <DashboardCard 
+          title="Monthly Revenue" 
+          value={`₹${monthlyRevenue.toLocaleString()}`} 
+          color="border-purple-500" 
+        />
       </div>
-
-      {/* Add more dashboard sections as needed */}
     </div>
   );
 }

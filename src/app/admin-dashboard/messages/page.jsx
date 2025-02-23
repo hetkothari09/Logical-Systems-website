@@ -4,52 +4,38 @@ import { motion } from 'framer-motion';
 import { useAdmin } from '@/contexts/AdminContext';
 
 export default function Messages() {
-  const { employees } = useAdmin();
-  const [chats, setChats] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const { employees, chats, messages, initializeChats, sendMessage, getChatMessages, startChat } = useAdmin();
   const [selectedChat, setSelectedChat] = useState(null);
+  const [currentMessages, setCurrentMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [view, setView] = useState('chats'); // 'chats' or 'employees'
 
-  // Initialize chats from employees
   useEffect(() => {
-    const initialChats = employees.map(emp => ({
-      id: emp.id,
-      name: emp.name,
-      role: emp.role,
-      lastMessage: "No messages yet",
-      timestamp: "",
-      unread: 0,
-      online: Math.random() > 0.5 // Random online status for demo
-    }));
-    setChats(initialChats);
-    if (initialChats.length > 0) {
-      setSelectedChat(initialChats[0]);
+    if (chats.length === 0) {
+      initializeChats();
     }
-  }, [employees]);
+  }, [chats.length, initializeChats]);
+
+  useEffect(() => {
+    if (selectedChat) {
+      const chatMessages = getChatMessages(selectedChat.id);
+      setCurrentMessages(chatMessages);
+    }
+  }, [selectedChat, messages, getChatMessages]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedChat) return;
 
-    const newMsg = {
-      id: Date.now(),
-      sender: 'Admin',
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isAdmin: true
-    };
-
-    setMessages(prev => [...prev, newMsg]);
-    
-    // Update last message in chats
-    setChats(prev => prev.map(chat => 
-      chat.id === selectedChat.id 
-        ? { ...chat, lastMessage: newMessage, timestamp: 'Just now' }
-        : chat
-    ));
-
+    sendMessage(selectedChat.id, newMessage);
     setNewMessage('');
+  };
+
+  const handleStartNewChat = (employee) => {
+    const chat = startChat(employee);
+    setSelectedChat(chat);
+    setView('chats');
   };
 
   const filteredChats = chats.filter(chat => 
@@ -57,108 +43,127 @@ export default function Messages() {
     chat.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredEmployees = employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    emp.role.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="flex h-[calc(100vh-12rem)] bg-gray-800/30 rounded-xl overflow-hidden">
-      {/* Chats Sidebar */}
-      <div className="w-80 border-r border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search conversations..."
-            className="w-full px-4 py-2 bg-gray-700 rounded-lg text-gray-200 placeholder-gray-400"
-          />
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {filteredChats.map((chat) => (
-            <motion.div
-              key={chat.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={() => setSelectedChat(chat)}
-              className={`p-4 cursor-pointer hover:bg-gray-700/50 ${
-                selectedChat?.id === chat.id ? 'bg-gray-700/50' : ''
+    <div className="flex h-[calc(100vh-6rem)]">
+      {/* Sidebar */}
+      <div className="w-1/3 bg-gray-800/50 rounded-lg overflow-hidden mr-4">
+        <div className="p-4">
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setView('chats')}
+              className={`flex-1 py-2 rounded-lg ${
+                view === 'chats' ? 'bg-purple-600' : 'bg-gray-700'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="relative">
-                    <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                      {chat.name.charAt(0)}
-                    </div>
-                    {chat.online && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800" />
-                    )}
+              Chats
+            </button>
+            <button
+              onClick={() => setView('employees')}
+              className={`flex-1 py-2 rounded-lg ${
+                view === 'employees' ? 'bg-purple-600' : 'bg-gray-700'
+              }`}
+            >
+              Employees
+            </button>
+          </div>
+          <input
+            type="text"
+            placeholder={view === 'chats' ? "Search chats..." : "Search employees..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+          />
+        </div>
+        <div className="overflow-y-auto h-[calc(100%-8rem)]">
+          {view === 'chats' ? (
+            filteredChats.map(chat => (
+              <motion.div
+                key={chat.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={() => setSelectedChat(chat)}
+                className={`p-4 cursor-pointer hover:bg-gray-700/50 ${
+                  selectedChat?.id === chat.id ? 'bg-gray-700/50' : ''
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{chat.name}</h3>
+                    <p className="text-sm text-gray-400">{chat.role}</p>
                   </div>
-                  <div className="ml-3">
-                    <div className="font-medium">{chat.name}</div>
-                    <div className="text-sm text-gray-400">{chat.role}</div>
+                  <div className="flex items-center">
+                    <span className={`w-2 h-2 rounded-full ${
+                      chat.online ? 'bg-green-500' : 'bg-gray-500'
+                    }`} />
                   </div>
                 </div>
-                {chat.unread > 0 && (
-                  <div className="bg-purple-500 text-xs px-2 py-1 rounded-full">
-                    {chat.unread}
-                  </div>
+                <p className="text-sm text-gray-400 mt-1 truncate">{chat.lastMessage}</p>
+                {chat.timestamp && (
+                  <p className="text-xs text-gray-500 mt-1">{chat.timestamp}</p>
                 )}
-              </div>
-              <div className="mt-2 text-sm text-gray-400 flex justify-between">
-                <span className="truncate">{chat.lastMessage}</span>
-                <span className="text-xs">{chat.timestamp}</span>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))
+          ) : (
+            filteredEmployees.map(employee => (
+              <motion.div
+                key={employee.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={() => handleStartNewChat(employee)}
+                className="p-4 cursor-pointer hover:bg-gray-700/50"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{employee.name}</h3>
+                    <p className="text-sm text-gray-400">{employee.role}</p>
+                  </div>
+                  <button className="text-purple-500 text-sm">
+                    Chat
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* Chat Window */}
       {selectedChat ? (
-        <div className="flex-1 flex flex-col">
-          <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="font-medium text-lg">{selectedChat.name}</div>
-              <div className="ml-2 text-sm text-gray-400">{selectedChat.role}</div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="text-gray-400 hover:text-white">
-                <span>📞</span>
-              </button>
-              <button className="text-gray-400 hover:text-white">
-                <span>📹</span>
-              </button>
-            </div>
+        <div className="flex-1 bg-gray-800/50 rounded-lg overflow-hidden flex flex-col">
+          <div className="p-4 bg-gray-700/50">
+            <h2 className="font-medium">{selectedChat.name}</h2>
+            <p className="text-sm text-gray-400">{selectedChat.role}</p>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
+          <div className="flex-1 overflow-y-auto p-4">
+            {currentMessages.map(message => (
               <motion.div
                 key={message.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex ${message.isAdmin ? 'justify-end' : 'justify-start'}`}
+                className={`mb-4 flex ${message.isAdmin ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  className={`max-w-[70%] rounded-lg p-3 ${
-                    message.isAdmin
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-200'
-                  }`}
-                >
-                  <div className="text-sm">{message.content}</div>
-                  <div className="text-xs mt-1 opacity-70">{message.timestamp}</div>
+                <div className={`max-w-[70%] rounded-lg p-3 ${
+                  message.isAdmin ? 'bg-purple-600' : 'bg-gray-700'
+                }`}>
+                  <p>{message.content}</p>
+                  <p className="text-xs text-gray-400 mt-1">{message.timestamp}</p>
                 </div>
               </motion.div>
             ))}
           </div>
-
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700">
-            <div className="flex items-center space-x-4">
+          <form onSubmit={handleSendMessage} className="p-4 bg-gray-700/50">
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1 px-4 py-2 bg-gray-700 rounded-lg text-gray-200 placeholder-gray-400"
+                placeholder="Type a message..."
+                className="flex-1 px-4 py-2 bg-gray-700 rounded-lg"
               />
               <button
                 type="submit"
@@ -170,8 +175,8 @@ export default function Messages() {
           </form>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-400">
-          Select a conversation to start messaging
+        <div className="flex-1 bg-gray-800/50 rounded-lg flex items-center justify-center">
+          <p className="text-gray-400">Select a chat to start messaging</p>
         </div>
       )}
     </div>

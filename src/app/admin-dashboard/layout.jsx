@@ -14,8 +14,11 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale,
+  TimeSeriesScale
 } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 
 ChartJS.register(
   CategoryScale,
@@ -26,7 +29,9 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale,
+  TimeSeriesScale
 );
 
 const navItems = [
@@ -36,6 +41,7 @@ const navItems = [
   { name: 'Schedule', path: '/admin-dashboard/schedule' },
   { name: 'Finance', path: '/admin-dashboard/finance' },
   { name: 'Analytics', path: '/admin-dashboard/analytics' },
+  { name: 'Messages', path: '/admin-dashboard/messages' },
   { name: 'Reports', path: '/admin-dashboard/reports' },
   { name: 'Settings', path: '/admin-dashboard/settings' },
 ];

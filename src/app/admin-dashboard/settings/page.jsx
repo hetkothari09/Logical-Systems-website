@@ -4,6 +4,13 @@ import { motion } from 'framer-motion';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') || 'dark';
+    }
+    return 'dark';
+  });
+
   const [profileData, setProfileData] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('profileSettings');
@@ -17,7 +24,7 @@ export default function Settings() {
           tasks: true,
           events: true
         },
-        theme: 'dark',
+        theme: theme,
         language: 'English'
       };
     }
@@ -27,8 +34,10 @@ export default function Settings() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('profileSettings', JSON.stringify(profileData));
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      localStorage.setItem('theme', theme);
     }
-  }, [profileData]);
+  }, [profileData, theme]);
 
   const handleProfileUpdate = (e) => {
     e.preventDefault();
@@ -44,6 +53,21 @@ export default function Settings() {
         [type]: !prev.notifications[type]
       }
     }));
+  };
+
+  const toggleTheme = (newTheme) => {
+    setTheme(newTheme);
+    if (typeof window !== 'undefined') {
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('theme', newTheme);
+      setProfileData(prev => ({ ...prev, theme: newTheme }));
+    }
   };
 
   return (
@@ -72,43 +96,41 @@ export default function Settings() {
         <motion.form
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
           onSubmit={handleProfileUpdate}
+          className="space-y-6"
         >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                value={profileData.name}
-                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={profileData.email}
-                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Name
+            </label>
+            <input
+              type="text"
+              value={profileData.name}
+              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              value={profileData.email}
+              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={profileData.phone}
+              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+            />
           </div>
           <button
             type="submit"
@@ -149,18 +171,45 @@ export default function Settings() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          <button className="w-full bg-gray-800/50 p-4 rounded-lg text-left hover:bg-gray-700/50">
+          <div className="bg-gray-800/50 p-4 rounded-lg space-y-4">
             <h3 className="font-medium">Change Password</h3>
-            <p className="text-sm text-gray-400">Update your password</p>
-          </button>
-          <button className="w-full bg-gray-800/50 p-4 rounded-lg text-left hover:bg-gray-700/50">
-            <h3 className="font-medium">Two-Factor Authentication</h3>
-            <p className="text-sm text-gray-400">Add an extra layer of security</p>
-          </button>
-          <button className="w-full bg-gray-800/50 p-4 rounded-lg text-left hover:bg-gray-700/50">
-            <h3 className="font-medium">Login History</h3>
-            <p className="text-sm text-gray-400">View your login history</p>
-          </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                Current Password
+              </label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                New Password
+              </label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+              />
+            </div>
+            <button className="w-full bg-purple-600 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+              Update Password
+            </button>
+          </div>
+          <div className="bg-gray-800/50 p-4 rounded-lg">
+            <h3 className="font-medium mb-4">Two-Factor Authentication</h3>
+            <button className="w-full bg-purple-600 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+              Enable 2FA
+            </button>
+          </div>
         </motion.div>
       )}
 
@@ -174,9 +223,9 @@ export default function Settings() {
             <h3 className="font-medium mb-4">Theme</h3>
             <div className="flex space-x-4">
               <button
-                onClick={() => setProfileData({ ...profileData, theme: 'dark' })}
+                onClick={() => toggleTheme('dark')}
                 className={`px-4 py-2 rounded ${
-                  profileData.theme === 'dark'
+                  theme === 'dark'
                     ? 'bg-purple-600'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
@@ -184,9 +233,9 @@ export default function Settings() {
                 Dark
               </button>
               <button
-                onClick={() => setProfileData({ ...profileData, theme: 'light' })}
+                onClick={() => toggleTheme('light')}
                 className={`px-4 py-2 rounded ${
-                  profileData.theme === 'light'
+                  theme === 'light'
                     ? 'bg-purple-600'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
@@ -194,6 +243,19 @@ export default function Settings() {
                 Light
               </button>
             </div>
+          </div>
+          <div className="bg-gray-800/50 p-4 rounded-lg">
+            <h3 className="font-medium mb-4">Language</h3>
+            <select
+              value={profileData.language}
+              onChange={(e) => setProfileData({ ...profileData, language: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+            >
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+            </select>
           </div>
         </motion.div>
       )}

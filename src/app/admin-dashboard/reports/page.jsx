@@ -12,19 +12,37 @@ export default function Reports() {
 
   const financialStats = getFinancialStats(dateRange);
 
+  const dateRangeOptions = {
+    currentWeek: 'Current Week',
+    lastWeek: 'Last Week',
+    month: 'Current Month',
+    year: 'Current Year'
+  };
+  
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       x: {
-        type: 'category',
+        type: 'timeseries',
+        time: {
+          unit: dateRange.includes('Week') ? 'day' : dateRange === 'month' ? 'week' : 'month',
+          displayFormats: {
+            day: 'MMM d',
+            week: 'MMM d',
+            month: 'MMM yyyy'
+          }
+        },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
         },
-        ticks: { color: 'rgb(156, 163, 175)' }
+        ticks: { 
+          color: 'rgb(156, 163, 175)',
+          source: 'auto',
+          autoSkip: true
+        }
       },
       y: {
-        type: 'linear',
         beginAtZero: true,
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
@@ -62,19 +80,19 @@ export default function Reports() {
     ]
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const data = {
       financial: {
         summary: {
-          totalRevenue: financialStats.totalRevenue,
-          totalExpenses: financialStats.totalExpenses,
-          netProfit: financialStats.totalRevenue - financialStats.totalExpenses
+          totalRevenue: financialStats.totalRevenue.toFixed(2),
+          totalExpenses: financialStats.totalExpenses.toFixed(2),
+          netProfit: (financialStats.totalRevenue - financialStats.totalExpenses).toFixed(2)
         },
         transactions: finances.map(t => ({
           date: t.date,
           type: t.type,
           category: t.category,
-          amount: t.amount,
+          amount: t.amount.toFixed(2),
           description: t.description
         }))
       },
@@ -83,12 +101,13 @@ export default function Reports() {
           totalEmployees: employees.length,
           activeEmployees: employees.filter(emp => emp.status === 'Active').length
         },
-        performance: employees.map(emp => ({
+        employees: employees.map(emp => ({
           name: emp.name,
           role: emp.role,
           status: emp.status,
-          tasksCompleted: tasks.filter(t => t.assignedTo === emp.name && t.status === 'Completed').length,
-          tasksInProgress: tasks.filter(t => t.assignedTo === emp.name && t.status === 'In Progress').length
+          email: emp.email,
+          phone: emp.phone,
+          tasksCompleted: tasks.filter(t => t.assignedTo === emp.name && t.status === 'Completed').length
         }))
       },
       tasks: {
@@ -98,26 +117,93 @@ export default function Reports() {
           inProgress: tasks.filter(t => t.status === 'In Progress').length,
           pending: tasks.filter(t => t.status === 'Pending').length
         },
-        details: tasks.map(t => ({
+        tasks: tasks.map(t => ({
           title: t.title,
           assignedTo: t.assignedTo,
           status: t.status,
           priority: t.priority,
-          deadline: t.deadline
+          deadline: t.deadline,
+          description: t.description
         }))
       }
     };
 
     const reportData = data[reportType];
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.${exportFormat}`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    
+    if (exportFormat === 'pdf') {
+      try {
+        const { default: jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+        
+        // Set font size and add title
+        doc.setFontSize(16);
+        doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 10, 20);
+        
+        // Add date range
+        doc.setFontSize(12);
+        doc.text(`Date Range: ${dateRangeOptions[dateRange]}`, 10, 30);
+        
+        // Add summary section
+        doc.setFontSize(14);
+        doc.text('Summary', 10, 45);
+        doc.setFontSize(12);
+        
+        let yPos = 55;
+        Object.entries(reportData.summary).forEach(([key, value]) => {
+          const formattedKey = key.replace(/([A-Z])/g, ' $1').charAt(0).toUpperCase() + key.slice(1);
+          doc.text(`${formattedKey}: ${value}`, 15, yPos);
+          yPos += 10;
+        });
+        
+        doc.save(`${reportType}_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try again.');
+      }
+    } else if (exportFormat === 'csv') {
+      try {
+        let csv = '';
+        const items = reportData[Object.keys(reportData)[1]]; // Get the array of items (transactions/employees/tasks)
+        
+        // Add headers
+        csv += Object.keys(items[0]).join(',') + '\n';
+        
+        // Add data rows
+        items.forEach(item => {
+          csv += Object.values(item).join(',') + '\n';
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error generating CSV:', error);
+        alert('Error generating CSV. Please try again.');
+      }
+    } else {
+      try {
+        const blob = new Blob([JSON.stringify(reportData, null, 2)], { 
+          type: 'application/json' 
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error generating JSON:', error);
+        alert('Error generating JSON. Please try again.');
+      }
+    }
   };
 
   return (
@@ -141,9 +227,10 @@ export default function Reports() {
             onChange={(e) => setDateRange(e.target.value)}
             className="bg-gray-700 px-4 py-2 rounded-lg"
           >
-            <option value="week">Last Week</option>
-            <option value="month">Last Month</option>
-            <option value="year">Last Year</option>
+            <option value="currentWeek">Current Week</option>
+            <option value="lastWeek">Last Week</option>
+            <option value="month">Current Month</option>
+            <option value="year">Current Year</option>
           </select>
           <select
             value={exportFormat}
@@ -168,11 +255,11 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-800/50 p-6 rounded-lg">
               <h3 className="text-gray-400 mb-2">Total Revenue</h3>
-              <p className="text-2xl font-bold text-green-500">₹{financialStats.totalRevenue}</p>
+              <p className="text-2xl font-bold text-green-500">₹{financialStats.totalRevenue.toFixed(2)}</p>
             </div>
             <div className="bg-gray-800/50 p-6 rounded-lg">
               <h3 className="text-gray-400 mb-2">Total Expenses</h3>
-              <p className="text-2xl font-bold text-red-500">₹{financialStats.totalExpenses}</p>
+              <p className="text-2xl font-bold text-red-500">₹{financialStats.totalExpenses.toFixed(2)}</p>
             </div>
             <div className="bg-gray-800/50 p-6 rounded-lg">
               <h3 className="text-gray-400 mb-2">Net Profit</h3>
@@ -181,7 +268,7 @@ export default function Reports() {
                   ? 'text-green-500' 
                   : 'text-red-500'
               }`}>
-                ₹{financialStats.totalRevenue - financialStats.totalExpenses}
+                ₹{(financialStats.totalRevenue - financialStats.totalExpenses).toFixed(2)}
               </p>
             </div>
           </div>

@@ -24,9 +24,9 @@ const Footer = () => {
         <div>
           <h4 className="text-lg font-semibold mb-4">Contact Info</h4>
           <ul className="space-y-2 text-gray-400">
-            <li>123 Tech Street</li>
-            <li>City, Country</li>
-            <li>Phone: +1 234 567 890</li>
+            <li> Shop No.1, Shree Krishna Building, Kamla Vihar Sports Club Lane</li>
+            <li> Mahavir Nagar, Kandivali West, Mumbai, India</li>
+            <li>Phone: +91 9820139143</li>
             <li>Email: info@logicalsystems.com</li>
           </ul>
         </div>

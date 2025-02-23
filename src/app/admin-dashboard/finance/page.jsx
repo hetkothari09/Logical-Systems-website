@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '@/contexts/AdminContext';
+import { Bar } from 'react-chartjs-2';
 import Modal from '@/components/admin/Modal';
-import { Line } from 'react-chartjs-2';
 
 export default function Finance() {
   const { finances, addTransaction, getFinancialStats } = useAdmin();
@@ -16,6 +16,67 @@ export default function Finance() {
     description: '',
     date: new Date().toISOString().split('T')[0]
   });
+
+  const stats = getFinancialStats(dateRange);
+
+  const chartData = {
+    labels: stats.labels,
+    datasets: [
+      {
+        label: 'Revenue',
+        data: stats.revenue,
+        backgroundColor: 'rgba(34, 197, 94, 0.5)',
+        borderColor: 'rgb(34, 197, 94)',
+        borderWidth: 1,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7
+      },
+      {
+        label: 'Expenses',
+        data: stats.expenses,
+        backgroundColor: 'rgba(239, 68, 68, 0.5)',
+        borderColor: 'rgb(239, 68, 68)',
+        borderWidth: 1,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7
+      }
+    ]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        },
+        ticks: { 
+          color: 'rgb(156, 163, 175)'
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        },
+        ticks: {
+          callback: (value) => `₹${value.toLocaleString()}`,
+          color: 'rgb(156, 163, 175)'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        labels: { color: 'rgb(156, 163, 175)' }
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => `₹${context.parsed.y.toLocaleString()}`
+        }
+      }
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -31,59 +92,6 @@ export default function Finance() {
       date: new Date().toISOString().split('T')[0]
     });
     setIsAddModalOpen(false);
-  };
-
-  const stats = getFinancialStats(dateRange);
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        type: 'category',
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        },
-        ticks: { color: 'rgb(156, 163, 175)' }
-      },
-      y: {
-        type: 'linear',
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        },
-        ticks: {
-          callback: (value) => `₹${value}`,
-          color: 'rgb(156, 163, 175)'
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        labels: { color: 'rgb(156, 163, 175)' }
-      }
-    }
-  };
-
-  // Chart data
-  const revenueData = {
-    labels: stats.labels,
-    datasets: [
-      {
-        label: 'Revenue',
-        data: stats.revenue,
-        borderColor: 'rgb(34, 197, 94)',
-        backgroundColor: 'rgba(34, 197, 94, 0.5)',
-        tension: 0.4
-      },
-      {
-        label: 'Expenses',
-        data: stats.expenses,
-        borderColor: 'rgb(239, 68, 68)',
-        backgroundColor: 'rgba(239, 68, 68, 0.5)',
-        tension: 0.4
-      }
-    ]
   };
 
   return (
@@ -103,16 +111,18 @@ export default function Finance() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gray-800/50 p-6 rounded-lg">
           <h3 className="text-gray-400 mb-2">Total Revenue</h3>
-          <p className="text-2xl font-bold text-green-500">₹{stats.totalRevenue}</p>
+          <p className="text-2xl font-bold text-green-500">₹{stats.totalRevenue.toLocaleString()}</p>
         </div>
         <div className="bg-gray-800/50 p-6 rounded-lg">
           <h3 className="text-gray-400 mb-2">Total Expenses</h3>
-          <p className="text-2xl font-bold text-red-500">₹{stats.totalExpenses}</p>
+          <p className="text-2xl font-bold text-red-500">₹{stats.totalExpenses.toLocaleString()}</p>
         </div>
         <div className="bg-gray-800/50 p-6 rounded-lg">
           <h3 className="text-gray-400 mb-2">Net Profit</h3>
-          <p className={`text-2xl font-bold ${stats.totalRevenue - stats.totalExpenses >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            ₹{stats.totalRevenue - stats.totalExpenses}
+          <p className={`text-2xl font-bold ${
+            stats.totalRevenue - stats.totalExpenses >= 0 ? 'text-green-500' : 'text-red-500'
+          }`}>
+            ₹{(stats.totalRevenue - stats.totalExpenses).toLocaleString()}
           </p>
         </div>
       </div>
@@ -125,13 +135,14 @@ export default function Finance() {
             onChange={(e) => setDateRange(e.target.value)}
             className="bg-gray-700 px-3 py-1 rounded-lg"
           >
-            <option value="week">Last Week</option>
-            <option value="month">Last Month</option>
-            <option value="year">Last Year</option>
+            <option value="currentWeek">Current Week</option>
+            <option value="lastWeek">Last Week</option>
+            <option value="month">Current Month</option>
+            <option value="year">Current Year</option>
           </select>
         </div>
         <div className="h-[400px]">
-          <Line data={revenueData} options={chartOptions} />
+          <Bar data={chartData} options={chartOptions} />
         </div>
       </div>
 
@@ -171,7 +182,7 @@ export default function Finance() {
                   <td className={`px-6 py-4 text-sm font-medium ${
                     transaction.type === 'income' ? 'text-green-400' : 'text-red-400'
                   }`}>
-                    ₹{transaction.amount}
+                    ₹{transaction.amount.toLocaleString()}
                   </td>
                 </motion.tr>
               ))}

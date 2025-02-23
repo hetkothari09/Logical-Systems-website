@@ -11,7 +11,6 @@ export const useAdmin = () => {
   return context;
 };
 
-// Custom hook for localStorage
 const useLocalStorage = (key, initialValue) => {
   const [state, setState] = useState(initialValue);
 
@@ -90,50 +89,28 @@ export function AdminProvider({ children }) {
     {
       id: 1,
       type: 'income',
-      amount: 25000,
+      amount: 1000000,
       category: 'Sales',
       description: 'CCTV Installation',
-      date: '2024-03-15'
-    },
-    {
-      id: 2,
-      type: 'expense',
-      amount: 15000,
-      category: 'Equipment',
-      description: 'Security Cameras Purchase',
-      date: '2024-03-14'
+      date: '2024-01-23'
     },
   ]);
 
-  // Employee Management Functions
+  const [messages, setMessages] = useLocalStorage('messages', []);
+  const [chats, setChats] = useLocalStorage('chats', []);
+
+  // Employee functions
   const addEmployee = (employee) => {
-    const newEmployee = {
-      ...employee,
-      id: Date.now(),
-      tasks: 0,
-      status: 'Active'
-    };
-    setEmployees([...employees, newEmployee]);
+    setEmployees([...employees, { ...employee, id: Date.now() }]);
   };
 
   const editEmployee = (id, updatedData) => {
-    setEmployees(employees.map(emp => 
+    setEmployees(employees.map(emp =>
       emp.id === id ? { ...emp, ...updatedData } : emp
     ));
   };
 
   const removeEmployee = (id) => {
-    setTasks(tasks.filter(task => task.assignedTo !== 
-      employees.find(emp => emp.id === id)?.name
-    ));
-    
-    setEvents(events.map(event => ({
-      ...event,
-      participants: event.participants.filter(
-        participant => participant !== employees.find(emp => emp.id === id)?.name
-      )
-    })));
-
     setEmployees(employees.filter(emp => emp.id !== id));
   };
 
@@ -143,7 +120,7 @@ export function AdminProvider({ children }) {
     ));
   };
 
-  // Task Management Functions
+  // Task functions
   const addTask = (task) => {
     const newTask = {
       ...task,
@@ -160,11 +137,11 @@ export function AdminProvider({ children }) {
   };
 
   const updateTaskStatus = (id, status) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, status } : task
-    ));
-
     const task = tasks.find(t => t.id === id);
+    setTasks(tasks.map(t =>
+      t.id === id ? { ...t, status } : t
+    ));
+    
     if (status === 'Completed') {
       setEmployees(employees.map(emp =>
         emp.name === task.assignedTo
@@ -186,7 +163,7 @@ export function AdminProvider({ children }) {
     setTasks(tasks.filter(t => t.id !== id));
   };
 
-  // Event Management Functions
+  // Event functions
   const addEvent = (event) => {
     setEvents([...events, { ...event, id: Date.now() }]);
   };
@@ -201,71 +178,156 @@ export function AdminProvider({ children }) {
     setEvents(events.filter(event => event.id !== id));
   };
 
-  // Finance Management Functions
+  // Finance functions
   const addTransaction = (transaction) => {
     setFinances([...finances, { ...transaction, id: Date.now() }]);
   };
 
+  // Chat functions
+  const initializeChats = () => {
+    if (chats.length === 0) {
+      const initialChats = employees.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        role: emp.role,
+        lastMessage: "No messages yet",
+        timestamp: "",
+        unread: 0,
+        online: Math.random() > 0.5,
+        isActive: false
+      }));
+      setChats(initialChats);
+    }
+  };
+
+  const startChat = (employee) => {
+    const existingChat = chats.find(chat => chat.id === employee.id);
+    if (!existingChat) {
+      const newChat = {
+        id: employee.id,
+        name: employee.name,
+        role: employee.role,
+        lastMessage: "No messages yet",
+        timestamp: "",
+        unread: 0,
+        online: Math.random() > 0.5,
+        isActive: true
+      };
+      setChats(prevChats => [newChat, ...prevChats]);
+      return newChat;
+    }
+    
+    // Move existing chat to top of list
+    setChats(prevChats => [
+      existingChat,
+      ...prevChats.filter(chat => chat.id !== employee.id)
+    ]);
+    return existingChat;
+  };
+
+  const sendMessage = (chatId, content) => {
+    const newMessage = {
+      id: Date.now(),
+      chatId,
+      content,
+      sender: 'Admin',
+      timestamp: new Date().toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      }),
+      isAdmin: true
+    };
+
+    setMessages(prevMessages => [...prevMessages, newMessage]);
+    
+    const now = new Date().toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    // Move chat to top when new message is sent
+    const updatedChat = chats.find(chat => chat.id === chatId);
+    setChats(prevChats => [
+      { ...updatedChat, lastMessage: content, timestamp: now, unread: 0 },
+      ...prevChats.filter(chat => chat.id !== chatId)
+    ]);
+  };
+
+  const getChatMessages = (chatId) => {
+    return messages.filter(msg => msg.chatId === chatId);
+  };
+
   const getFinancialStats = (dateRange) => {
     const now = new Date();
-    let startDate;
+    let startDate = new Date();
     
     switch(dateRange) {
-      case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7));
+      case 'currentWeek':
+        startDate.setDate(now.getDate() - now.getDay());
+        break;
+      case 'lastWeek':
+        startDate.setDate(now.getDate() - now.getDay() - 7);
         break;
       case 'month':
-        startDate = new Date(now.setMonth(now.getMonth() - 1));
+        startDate.setMonth(now.getMonth(), 1);
         break;
       case 'year':
-        startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+        startDate.setMonth(0, 1);
         break;
       default:
-        startDate = new Date(now.setMonth(now.getMonth() - 1));
+        startDate.setMonth(now.getMonth(), 1);
     }
 
-    const filteredTransactions = finances.filter(t => new Date(t.date) >= startDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+
+    const dateArray = [];
+    const revenueData = [];
+    const expensesData = [];
     
-    const totalRevenue = filteredTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-      
-    const totalExpenses = filteredTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const labels = [];
-    const revenue = [];
-    const expenses = [];
-
     let currentDate = new Date(startDate);
-    while (currentDate <= now) {
+
+    while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0];
-      labels.push(dateStr);
-      
-      const dayRevenue = filteredTransactions
+      dateArray.push(dateStr);
+
+      const dayRevenue = finances
         .filter(t => t.date === dateStr && t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
-      revenue.push(dayRevenue);
+      revenueData.push(dayRevenue);
 
-      const dayExpenses = filteredTransactions
+      const dayExpenses = finances
         .filter(t => t.date === dateStr && t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
-      expenses.push(dayExpenses);
+      expensesData.push(dayExpenses);
 
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
+    const totalRevenue = finances
+      .filter(t => new Date(t.date) >= startDate && 
+                  new Date(t.date) <= endDate && 
+                  t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalExpenses = finances
+      .filter(t => new Date(t.date) >= startDate && 
+                  new Date(t.date) <= endDate && 
+                  t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
     return {
+      labels: dateArray,
+      revenue: revenueData,
+      expenses: expensesData,
       totalRevenue,
-      totalExpenses,
-      labels,
-      revenue,
-      expenses
+      totalExpenses
     };
   };
-
-  // Dashboard Statistics
+  
   const getStatistics = () => {
     return {
       totalEmployees: employees.length,
@@ -281,13 +343,11 @@ export function AdminProvider({ children }) {
     <AdminContext.Provider
       value={{
         employees,
-        setEmployees,
         tasks,
-        setTasks,
         events,
-        setEvents,
         finances,
-        setFinances,
+        messages,
+        chats,
         addEmployee,
         editEmployee,
         removeEmployee,
@@ -299,6 +359,10 @@ export function AdminProvider({ children }) {
         editEvent,
         removeEvent,
         addTransaction,
+        initializeChats,
+        startChat,
+        sendMessage,
+        getChatMessages,
         getFinancialStats,
         getStatistics
       }}
