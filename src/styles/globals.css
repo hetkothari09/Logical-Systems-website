@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navbar-height: 5rem;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: black;
+}
+
+body {
+  color: white;
+  overflow-x: hidden;
+}
+
+section {
+  scroll-margin-top: var(--navbar-height);
+}
+
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Add base styles */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold;
+}
+
+a {
+  @apply transition-colors duration-200;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent;
+}
+
+/* Add responsive container padding */
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+}
+
+/* Add section spacing */
+section {
+  @apply py-20;
+}
+
+/* Add card hover effects */
+.hover-card {
+  @apply transition-all duration-200 hover:transform hover:scale-105;
+}
