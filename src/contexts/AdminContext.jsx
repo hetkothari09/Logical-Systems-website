@@ -1,11 +1,45 @@
 "use client";
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const AdminContext = createContext();
+export const AdminContext = createContext();
+
+export const useAdmin = () => {
+  const context = useContext(AdminContext);
+  if (!context) {
+    throw new Error('useAdmin must be used within an AdminProvider');
+  }
+  return context;
+};
+
+// Custom hook for localStorage
+const useLocalStorage = (key, initialValue) => {
+  const [state, setState] = useState(initialValue);
+
+  useEffect(() => {
+    try {
+      const item = localStorage.getItem(key);
+      if (item) {
+        setState(JSON.parse(item));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }, [key]);
+
+  const setValue = (value) => {
+    try {
+      setState(value);
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  return [state, setValue];
+};
 
 export function AdminProvider({ children }) {
-  // Employees State
-  const [employees, setEmployees] = useState([
+  const [employees, setEmployees] = useLocalStorage('employees', [
     { 
       id: 1, 
       name: 'John Doe', 
@@ -28,8 +62,7 @@ export function AdminProvider({ children }) {
     },
   ]);
 
-  // Tasks State
-  const [tasks, setTasks] = useState([
+  const [tasks, setTasks] = useLocalStorage('tasks', [
     {
       id: 1,
       title: 'Server Maintenance',
@@ -41,8 +74,7 @@ export function AdminProvider({ children }) {
     },
   ]);
 
-  // Events State
-  const [events, setEvents] = useState([
+  const [events, setEvents] = useLocalStorage('events', [
     {
       id: 1,
       title: 'Team Meeting',
@@ -54,8 +86,7 @@ export function AdminProvider({ children }) {
     },
   ]);
 
-  // Finances State
-  const [finances, setFinances] = useState([
+  const [finances, setFinances] = useLocalStorage('finances', [
     {
       id: 1,
       type: 'income',
@@ -92,12 +123,10 @@ export function AdminProvider({ children }) {
   };
 
   const removeEmployee = (id) => {
-    // Remove employee's tasks first
     setTasks(tasks.filter(task => task.assignedTo !== 
       employees.find(emp => emp.id === id)?.name
     ));
     
-    // Remove employee from events
     setEvents(events.map(event => ({
       ...event,
       participants: event.participants.filter(
@@ -105,7 +134,6 @@ export function AdminProvider({ children }) {
       )
     })));
 
-    // Finally remove the employee
     setEmployees(employees.filter(emp => emp.id !== id));
   };
 
@@ -124,7 +152,6 @@ export function AdminProvider({ children }) {
     };
     setTasks([...tasks, newTask]);
     
-    // Update employee task count
     setEmployees(employees.map(emp =>
       emp.name === task.assignedTo
         ? { ...emp, tasks: emp.tasks + 1 }
@@ -137,7 +164,6 @@ export function AdminProvider({ children }) {
       task.id === id ? { ...task, status } : task
     ));
 
-    // Update employee task count if task is completed
     const task = tasks.find(t => t.id === id);
     if (status === 'Completed') {
       setEmployees(employees.map(emp =>
@@ -208,12 +234,10 @@ export function AdminProvider({ children }) {
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Generate time series data
     const labels = [];
     const revenue = [];
     const expenses = [];
 
-    // Generate daily data points for the selected date range
     let currentDate = new Date(startDate);
     while (currentDate <= now) {
       const dateStr = currentDate.toISOString().split('T')[0];
@@ -254,34 +278,32 @@ export function AdminProvider({ children }) {
   };
 
   return (
-    <AdminContext.Provider value={{
-      // Data
-      employees,
-      tasks,
-      events,
-      finances,
-      // Employee methods
-      addEmployee,
-      editEmployee,
-      removeEmployee,
-      updateEmployeeStatus,
-      // Task methods
-      addTask,
-      updateTaskStatus,
-      removeTask,
-      // Event methods
-      addEvent,
-      editEvent,
-      removeEvent,
-      // Finance methods
-      addTransaction,
-      getFinancialStats,
-      // Statistics
-      getStatistics,
-    }}>
+    <AdminContext.Provider
+      value={{
+        employees,
+        setEmployees,
+        tasks,
+        setTasks,
+        events,
+        setEvents,
+        finances,
+        setFinances,
+        addEmployee,
+        editEmployee,
+        removeEmployee,
+        updateEmployeeStatus,
+        addTask,
+        updateTaskStatus,
+        removeTask,
+        addEvent,
+        editEvent,
+        removeEvent,
+        addTransaction,
+        getFinancialStats,
+        getStatistics
+      }}
+    >
       {children}
     </AdminContext.Provider>
   );
 }
-
-export const useAdmin = () => useContext(AdminContext);

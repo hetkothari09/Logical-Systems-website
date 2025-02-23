@@ -1,22 +1,40 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useAdmin } from '@/contexts/AdminContext';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [profileData, setProfileData] = useState({
-    name: 'Admin User',
-    email: 'admin@logicalsystems.com',
-    phone: '+91 9876543210',
-    notifications: {
-      email: true,
-      push: true,
-      tasks: true,
-      events: true
-    },
-    theme: 'dark'
+  const [profileData, setProfileData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('profileSettings');
+      return saved ? JSON.parse(saved) : {
+        name: 'Admin User',
+        email: 'admin@logicalsystems.com',
+        phone: '+91 9876543210',
+        notifications: {
+          email: true,
+          push: true,
+          tasks: true,
+          events: true
+        },
+        theme: 'dark',
+        language: 'English'
+      };
+    }
+    return {};
   });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profileSettings', JSON.stringify(profileData));
+    }
+  }, [profileData]);
+
+  const handleProfileUpdate = (e) => {
+    e.preventDefault();
+    localStorage.setItem('profileSettings', JSON.stringify(profileData));
+    alert('Profile updated successfully!');
+  };
 
   const handleNotificationToggle = (type) => {
     setProfileData(prev => ({
@@ -34,201 +52,146 @@ export default function Settings() {
         Settings
       </h1>
 
-      {/* Settings Navigation */}
       <div className="flex space-x-4 border-b border-gray-700">
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`px-4 py-2 ${
-            activeTab === 'profile'
-              ? 'text-purple-500 border-b-2 border-purple-500'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Profile
-        </button>
-        <button
-          onClick={() => setActiveTab('notifications')}
-          className={`px-4 py-2 ${
-            activeTab === 'notifications'
-              ? 'text-purple-500 border-b-2 border-purple-500'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Notifications
-        </button>
-        <button
-          onClick={() => setActiveTab('appearance')}
-          className={`px-4 py-2 ${
-            activeTab === 'appearance'
-              ? 'text-purple-500 border-b-2 border-purple-500'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Appearance
-        </button>
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`px-4 py-2 ${
-            activeTab === 'security'
-              ? 'text-purple-500 border-b-2 border-purple-500'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Security
-        </button>
+        {['profile', 'notifications', 'security', 'appearance'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 capitalize ${
+              activeTab === tab
+                ? 'text-purple-500 border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* Profile Settings */}
       {activeTab === 'profile' && (
-        <motion.div
+        <motion.form
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
+          onSubmit={handleProfileUpdate}
         >
-          <div className="bg-gray-800/50 p-6 rounded-xl space-y-4">
-            <h2 className="text-xl font-semibold">Profile Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={profileData.phone}
-                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-                />
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={profileData.name}
+                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+              />
             </div>
-            <button className="bg-purple-600 px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-              Save Changes
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={profileData.email}
+                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={profileData.phone}
+                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+              />
+            </div>
           </div>
-        </motion.div>
+          <button
+            type="submit"
+            className="w-full bg-purple-600 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Save Changes
+          </button>
+        </motion.form>
       )}
 
-      {/* Notification Settings */}
       {activeTab === 'notifications' && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
+          className="space-y-4"
         >
-          <div className="bg-gray-800/50 p-6 rounded-xl space-y-4">
-            <h2 className="text-xl font-semibold">Notification Preferences</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Email Notifications</h3>
-                  <p className="text-sm text-gray-400">Receive notifications via email</p>
-                </div>
-                <button
-                  onClick={() => handleNotificationToggle('email')}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    profileData.notifications.email ? 'bg-purple-600' : 'bg-gray-600'
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                      profileData.notifications.email ? 'translate-x-7' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Push Notifications</h3>
-                  <p className="text-sm text-gray-400">Receive push notifications</p>
-                </div>
-                <button
-                  onClick={() => handleNotificationToggle('push')}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    profileData.notifications.push ? 'bg-purple-600' : 'bg-gray-600'
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                      profileData.notifications.push ? 'translate-x-7' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              {/* Add more notification settings as needed */}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Appearance Settings */}
-      {activeTab === 'appearance' && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          <div className="bg-gray-800/50 p-6 rounded-xl space-y-4">
-            <h2 className="text-xl font-semibold">Appearance Settings</h2>
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Theme
-              </label>
-              <select
-                value={profileData.theme}
-                onChange={(e) => setProfileData({ ...profileData, theme: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+          {Object.entries(profileData.notifications).map(([key, value]) => (
+            <div key={key} className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+              <span className="capitalize">{key} Notifications</span>
+              <button
+                onClick={() => handleNotificationToggle(key)}
+                className={`w-12 h-6 rounded-full transition-colors ${
+                  value ? 'bg-purple-600' : 'bg-gray-600'
+                }`}
               >
-                <option value="dark">Dark Theme</option>
-                <option value="light">Light Theme</option>
-                <option value="system">System Default</option>
-              </select>
+                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                  value ? 'translate-x-7' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
-          </div>
+          ))}
         </motion.div>
       )}
 
-      {/* Security Settings */}
       {activeTab === 'security' && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
+          className="space-y-4"
         >
-          <div className="bg-gray-800/50 p-6 rounded-xl space-y-4">
-            <h2 className="text-xl font-semibold">Security Settings</h2>
-            <div className="space-y-4">
-              <button className="w-full bg-gray-700 p-4 rounded-lg text-left hover:bg-gray-600 transition-colors">
-                <h3 className="font-medium">Change Password</h3>
-                <p className="text-sm text-gray-400">Update your password</p>
+          <button className="w-full bg-gray-800/50 p-4 rounded-lg text-left hover:bg-gray-700/50">
+            <h3 className="font-medium">Change Password</h3>
+            <p className="text-sm text-gray-400">Update your password</p>
+          </button>
+          <button className="w-full bg-gray-800/50 p-4 rounded-lg text-left hover:bg-gray-700/50">
+            <h3 className="font-medium">Two-Factor Authentication</h3>
+            <p className="text-sm text-gray-400">Add an extra layer of security</p>
+          </button>
+          <button className="w-full bg-gray-800/50 p-4 rounded-lg text-left hover:bg-gray-700/50">
+            <h3 className="font-medium">Login History</h3>
+            <p className="text-sm text-gray-400">View your login history</p>
+          </button>
+        </motion.div>
+      )}
+
+      {activeTab === 'appearance' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <div className="bg-gray-800/50 p-4 rounded-lg">
+            <h3 className="font-medium mb-4">Theme</h3>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setProfileData({ ...profileData, theme: 'dark' })}
+                className={`px-4 py-2 rounded ${
+                  profileData.theme === 'dark'
+                    ? 'bg-purple-600'
+                    : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                Dark
               </button>
-              <button className="w-full bg-gray-700 p-4 rounded-lg text-left hover:bg-gray-600 transition-colors">
-                <h3 className="font-medium">Two-Factor Authentication</h3>
-                <p className="text-sm text-gray-400">Add an extra layer of security</p>
-              </button>
-              <button className="w-full bg-gray-700 p-4 rounded-lg text-left hover:bg-gray-600 transition-colors">
-                <h3 className="font-medium">Active Sessions</h3>
-                <p className="text-sm text-gray-400">Manage your active sessions</p>
+              <button
+                onClick={() => setProfileData({ ...profileData, theme: 'light' })}
+                className={`px-4 py-2 rounded ${
+                  profileData.theme === 'light'
+                    ? 'bg-purple-600'
+                    : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                Light
               </button>
             </div>
           </div>
