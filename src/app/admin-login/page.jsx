@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { authenticateAdmin } from '@/utils/auth';
 import { useRouter } from 'next/navigation';
 
@@ -22,18 +23,20 @@ const AdminLogin = () => {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
-      <motion.div
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <Image
-            src="/images/og-image.jpg"
-            alt="Logo"
-            width={200}
-            height={60}
-            className="mx-auto"
-          />
+          <Link href="/" className="inline-block">
+            <Image
+              src="/images/og-image.jpg"
+              alt="Logo"
+              width={200}
+              height={60}
+              className="mx-auto"
+            />
+          </Link>
           <h2 className="mt-6 text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
             Admin Login
           </h2>
@@ -76,10 +79,30 @@ const AdminLogin = () => {
             Sign In
           </button>
         </motion.form>
-        {error && <p className="text-red-500 text-center">{error}</p>}
+
+        {/* Added navigation options */}
+        <div className="space-y-4">
+          <div className="text-center">
+            <Link 
+              href="/employee-login"
+              className="text-blue-500 hover:text-blue-400 transition-colors"
+            >
+              Switch to Employee Login
+            </Link>
+          </div>
+          
+          <div className="text-center">
+            <Link 
+              href="/"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default AdminLogin; 
+export default AdminLogin;

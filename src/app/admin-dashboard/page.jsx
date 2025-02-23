@@ -15,8 +15,17 @@ const DashboardCard = ({ title, value, color }) => (
 );
 
 export default function AdminDashboard() {
-  const { tasks, employees, finances, getStatistics } = useAdmin();
+  const { tasks, employees, finances, getStatistics, notifications } = useAdmin();
   const stats = getStatistics();
+
+  const getUnreadCount = (type) => {
+    return notifications[type]?.filter(n => !n.isRead).length || 0;
+  };
+
+  const totalNotifications = Object.keys(notifications).reduce(
+    (sum, type) => sum + getUnreadCount(type), 
+    0
+  );
 
   // Calculate monthly revenue
   const currentDate = new Date();
@@ -29,6 +38,11 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
         Dashboard Overview
+        {totalNotifications > 0 && (
+          <span className="ml-2 text-sm bg-green-500 text-white px-2 py-1 rounded-full">
+            {totalNotifications} new
+          </span>
+        )}
       </h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -53,6 +67,26 @@ export default function AdminDashboard() {
           color="border-purple-500" 
         />
       </div>
+      {totalNotifications > 0 && (
+        <div className="bg-gray-800/50 p-6 rounded-xl">
+          <h2 className="text-xl font-bold mb-4">Recent Notifications</h2>
+          <div className="space-y-2">
+            {Object.entries(notifications).map(([type, items]) => {
+              const unread = items.filter(n => !n.isRead);
+              if (unread.length === 0) return null;
+              
+              return (
+                <div key={type} className="flex justify-between items-center">
+                  <span className="capitalize">{type}</span>
+                  <span className="bg-green-500/20 text-green-500 px-2 py-1 rounded">
+                    {unread.length} new
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

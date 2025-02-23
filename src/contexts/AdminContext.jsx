@@ -12,29 +12,27 @@ export const useAdmin = () => {
 };
 
 const useLocalStorage = (key, initialValue) => {
-  const [state, setState] = useState(initialValue);
+  const [state, setState] = useState(() => {
+    if (typeof window === 'undefined') return initialValue;
+    try {
+      const value = window.localStorage.getItem(key);
+      return value ? JSON.parse(value) : initialValue;
+    } catch (error) {
+      console.error('Error reading from localStorage:', error);
+      return initialValue;
+    }
+  });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      const item = localStorage.getItem(key);
-      if (item) {
-        setState(JSON.parse(item));
-      }
+      window.localStorage.setItem(key, JSON.stringify(state));
     } catch (error) {
-      console.log(error);
+      console.error('Error writing to localStorage:', error);
     }
-  }, [key]);
+  }, [key, state]);
 
-  const setValue = (value) => {
-    try {
-      setState(value);
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  return [state, setValue];
+  return [state, setState];
 };
 
 export function AdminProvider({ children }) {
@@ -98,197 +96,217 @@ export function AdminProvider({ children }) {
 
   const [messages, setMessages] = useLocalStorage('messages', []);
   const [chats, setChats] = useLocalStorage('chats', []);
+  const [notifications, setNotifications] = useLocalStorage('notifications', {
+    dashboard: [],
+    employees: [],
+    tasks: [],
+    schedule: [],
+    messages: [],
+    finance: [],
+    analytics: [],
+    reports: [],
+    settings: []
+  });
+
+  const markNotificationAsRead = (type) => {
+    setNotifications(prev => ({
+      ...prev,
+      [type]: prev[type].map(n => ({ ...n, isRead: true }))
+    }));
+  };
+
+  const addNotification = (type, content) => {
+    setNotifications(prev => ({
+      ...prev,
+      [type]: [...(prev[type] || []), { id: Date.now(), content, isRead: false }]
+    }));
+  };
 
   // Employee functions
   const addEmployee = (employee) => {
-    setEmployees([...employees, { ...employee, id: Date.now() }]);
+    const newEmployee = { ...employee, id: Date.now() };
+    setEmployees([...employees, newEmployee]);
+    addNotification('employees', `New employee added: ${employee.name}`);
   };
 
   const editEmployee = (id, updatedData) => {
-    setEmployees(employees.map(emp =>
+    setEmployees(employees.map(emp => 
       emp.id === id ? { ...emp, ...updatedData } : emp
     ));
+    addNotification('employees', `Employee updated: ${updatedData.name}`);
   };
 
   const removeEmployee = (id) => {
+    const employee = employees.find(emp => emp.id === id);
     setEmployees(employees.filter(emp => emp.id !== id));
+    addNotification('employees', `Employee removed: ${employee.name}`);
   };
 
   const updateEmployeeStatus = (id, status) => {
     setEmployees(employees.map(emp =>
       emp.id === id ? { ...emp, status } : emp
     ));
+    const employee = employees.find(emp => emp.id === id);
+    addNotification('employees', `Employee status updated: ${employee.name} is now ${status}`);
   };
 
   // Task functions
   const addTask = (task) => {
-    const newTask = {
-      ...task,
-      id: Date.now(),
-      status: 'Pending'
-    };
+    const newTask = { ...task, id: Date.now() };
     setTasks([...tasks, newTask]);
-    
-    setEmployees(employees.map(emp =>
-      emp.name === task.assignedTo
-        ? { ...emp, tasks: emp.tasks + 1 }
-        : emp
-    ));
+    addNotification('tasks', `New task assigned: ${task.title} to ${task.assignedTo}`);
   };
 
   const updateTaskStatus = (id, status) => {
-    const task = tasks.find(t => t.id === id);
-    setTasks(tasks.map(t =>
-      t.id === id ? { ...t, status } : t
+    setTasks(tasks.map(task =>
+      task.id === id ? { ...task, status } : task
     ));
-    
-    if (status === 'Completed') {
-      setEmployees(employees.map(emp =>
-        emp.name === task.assignedTo
-          ? { ...emp, tasks: Math.max(0, emp.tasks - 1) }
-          : emp
-      ));
-    }
+    const task = tasks.find(t => t.id === id);
+    addNotification('tasks', `Task status updated: ${task.title} is now ${status}`);
   };
 
   const removeTask = (id) => {
     const task = tasks.find(t => t.id === id);
-    if (task && task.status !== 'Completed') {
-      setEmployees(employees.map(emp =>
-        emp.name === task.assignedTo
-          ? { ...emp, tasks: Math.max(0, emp.tasks - 1) }
-          : emp
-      ));
-    }
-    setTasks(tasks.filter(t => t.id !== id));
+    setTasks(tasks.filter(task => task.id !== id));
+    addNotification('tasks', `Task removed: ${task.title}`);
   };
 
   // Event functions
   const addEvent = (event) => {
-    setEvents([...events, { ...event, id: Date.now() }]);
+    const newEvent = { ...event, id: Date.now() };
+    setEvents([...events, newEvent]);
+    addNotification('schedule', `New event scheduled: ${event.title}`);
   };
 
   const editEvent = (id, updatedData) => {
     setEvents(events.map(event =>
       event.id === id ? { ...event, ...updatedData } : event
     ));
+    addNotification('schedule', `Event updated: ${updatedData.title}`);
   };
 
   const removeEvent = (id) => {
+    const event = events.find(e => e.id === id);
     setEvents(events.filter(event => event.id !== id));
+    addNotification('schedule', `Event cancelled: ${event.title}`);
   };
 
   // Finance functions
   const addTransaction = (transaction) => {
-    setFinances([...finances, { ...transaction, id: Date.now() }]);
+    const newTransaction = { ...transaction, id: Date.now() };
+    setFinances([...finances, newTransaction]);
+    addNotification('finance', 
+      `New ${transaction.type}: ₹${transaction.amount} - ${transaction.description}`
+    );
   };
 
   // Chat functions
   const initializeChats = () => {
     if (chats.length === 0) {
-      const initialChats = employees.map(emp => ({
-        id: emp.id,
-        name: emp.name,
-        role: emp.role,
-        lastMessage: "No messages yet",
-        timestamp: "",
-        unread: 0,
-        online: Math.random() > 0.5,
-        isActive: false
-      }));
+      const initialChats = employees.map(emp => {
+        const employeeMessages = messages.filter(msg => 
+          msg.sender === emp.name || msg.recipient === emp.name
+        );
+        const lastMessage = employeeMessages.length > 0 
+          ? employeeMessages[employeeMessages.length - 1].content 
+          : "No messages yet";
+        const unreadCount = employeeMessages.filter(
+          msg => !msg.isRead && msg.sender === emp.name
+        ).length;
+
+        return {
+          id: emp.id,
+          name: emp.name,
+          role: emp.role,
+          lastMessage,
+          timestamp: employeeMessages.length > 0 
+            ? employeeMessages[employeeMessages.length - 1].timestamp 
+            : new Date().toISOString(),
+          unread: unreadCount,
+          online: false,
+          isActive: false
+        };
+      });
       setChats(initialChats);
     }
   };
 
   const startChat = (employee) => {
+    const employeeMessages = messages.filter(msg => 
+      msg.sender === employee.name || msg.recipient === employee.name
+    );
+    const lastMessage = employeeMessages.length > 0 
+      ? employeeMessages[employeeMessages.length - 1].content 
+      : "No messages yet";
+    const unreadCount = employeeMessages.filter(
+      msg => !msg.isRead && msg.sender === employee.name
+    ).length;
+
     const existingChat = chats.find(chat => chat.id === employee.id);
     if (!existingChat) {
       const newChat = {
         id: employee.id,
         name: employee.name,
         role: employee.role,
-        lastMessage: "No messages yet",
-        timestamp: "",
-        unread: 0,
-        online: Math.random() > 0.5,
+        lastMessage,
+        timestamp: employeeMessages.length > 0 
+          ? employeeMessages[employeeMessages.length - 1].timestamp 
+          : new Date().toISOString(),
+        unread: unreadCount,
+        online: false,
         isActive: true
       };
       setChats(prevChats => [newChat, ...prevChats]);
       return newChat;
     }
     
-    // Move existing chat to top of list
     setChats(prevChats => [
-      existingChat,
+      { ...existingChat, lastMessage, unread: unreadCount },
       ...prevChats.filter(chat => chat.id !== employee.id)
     ]);
     return existingChat;
   };
 
-  const sendMessage = (chatId, content) => {
+  const sendMessage = (content, recipientName) => {
     const newMessage = {
       id: Date.now(),
-      chatId,
       content,
       sender: 'Admin',
-      timestamp: new Date().toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      }),
-      isAdmin: true
+      recipient: recipientName,
+      timestamp: new Date().toISOString(),
+      isRead: false
     };
 
-    setMessages(prevMessages => [...prevMessages, newMessage]);
+    setMessages(prev => [...prev, newMessage]);
+    addNotification('messages', `Message sent to ${recipientName}`);
     
-    const now = new Date().toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
-    
-    // Move chat to top when new message is sent
-    const updatedChat = chats.find(chat => chat.id === chatId);
-    setChats(prevChats => [
-      { ...updatedChat, lastMessage: content, timestamp: now, unread: 0 },
-      ...prevChats.filter(chat => chat.id !== chatId)
-    ]);
-  };
-
-  const getChatMessages = (chatId) => {
-    return messages.filter(msg => msg.chatId === chatId);
-  };
-
-  const getFinancialStats = (dateRange) => {
-    const now = new Date();
-    let startDate = new Date();
-    
-    switch(dateRange) {
-      case 'currentWeek':
-        startDate.setDate(now.getDate() - now.getDay());
-        break;
-      case 'lastWeek':
-        startDate.setDate(now.getDate() - now.getDay() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(now.getMonth(), 1);
-        break;
-      case 'year':
-        startDate.setMonth(0, 1);
-        break;
-      default:
-        startDate.setMonth(now.getMonth(), 1);
+    // Update chat
+    const recipientEmployee = employees.find(emp => emp.name === recipientName);
+    if (recipientEmployee) {
+      startChat(recipientEmployee);
     }
+  };
 
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+  const getChatMessages = (employeeId) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (!employee) return [];
+    
+    return messages.filter(msg => 
+      (msg.sender === employee.name && msg.recipient === 'Admin') ||
+      (msg.sender === 'Admin' && msg.recipient === employee.name)
+    );
+  };
+
+  const getFinancialStats = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
 
     const dateArray = [];
     const revenueData = [];
     const expensesData = [];
-    
-    let currentDate = new Date(startDate);
+
+    const currentDate = new Date(startDate);
 
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0];
@@ -327,7 +345,7 @@ export function AdminProvider({ children }) {
       totalExpenses
     };
   };
-  
+
   const getStatistics = () => {
     return {
       totalEmployees: employees.length,
@@ -339,6 +357,22 @@ export function AdminProvider({ children }) {
     };
   };
 
+  const logout = () => {
+    setMessages([]);
+    setChats([]);
+    setNotifications({
+      dashboard: [],
+      employees: [],
+      tasks: [],
+      schedule: [],
+      messages: [],
+      finance: [],
+      analytics: [],
+      reports: [],
+      settings: []
+    });
+  };
+
   return (
     <AdminContext.Provider
       value={{
@@ -348,6 +382,7 @@ export function AdminProvider({ children }) {
         finances,
         messages,
         chats,
+        notifications,
         addEmployee,
         editEmployee,
         removeEmployee,
@@ -364,7 +399,10 @@ export function AdminProvider({ children }) {
         sendMessage,
         getChatMessages,
         getFinancialStats,
-        getStatistics
+        getStatistics,
+        markNotificationAsRead,
+        addNotification,
+        logout
       }}
     >
       {children}

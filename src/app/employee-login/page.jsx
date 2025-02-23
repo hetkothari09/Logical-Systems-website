@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { authenticate } from '@/utils/auth';
+import Link from 'next/link';
+import { authenticateEmployee } from '@/utils/auth';
 import { useRouter } from 'next/navigation';
+
 
 const EmployeeLogin = () => {
   const router = useRouter();
@@ -12,7 +14,7 @@ const EmployeeLogin = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (authenticate(formData.email, formData.password, 'employee')) {
+    if (authenticateEmployee(formData.email, formData.password)) {
       router.push('/employee-dashboard');
     } else {
       setError('Invalid credentials');
@@ -27,6 +29,7 @@ const EmployeeLogin = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
+        <Link href="/" className="inline-block">
           <Image
             src="/images/og-image.jpg"
             alt="Logo"
@@ -34,6 +37,7 @@ const EmployeeLogin = () => {
             height={60}
             className="mx-auto"
           />
+        </Link> 
           <h2 className="mt-6 text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
             Employee Login
           </h2>
@@ -76,9 +80,28 @@ const EmployeeLogin = () => {
             Sign In
           </button>
         </motion.form>
+
+        <div className="text-center mt-4">
+          <Link 
+            href="/admin-login"
+            className="text-blue-500 hover:text-blue-400 transition-colors"
+          >
+            Switch to Admin Login
+          </Link>
+        </div>
+        
+        <div className="text-center">
+          <Link 
+            href="/"
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            Back to Home
+          </Link>
+        </div>
+        
       </div>
     </div>
   );
 };
 
-export default EmployeeLogin; 
+export default EmployeeLogin;
